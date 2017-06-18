@@ -5,7 +5,6 @@ import uk.ac.cam.daw87.oop.summer.Sort.helpers.Number;
 import uk.ac.cam.daw87.oop.summer.Sort.helpers.Position;
 
 import java.io.*;
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.*;
@@ -83,24 +82,18 @@ public class External {
     }
 
     private void initialSort(FileChannel f1, FileChannel f2, ByteBuffer buffer) throws IOException{
-        //TODO: Sort better without creating an array ie using only the buffer then write the buffer.
+        //TODO: Sort better (maybe radix/bucket)
         f1.position(0);
         f2.position(0);
         int length;
         while (true){
-            buffer.position(0);
+            buffer.clear();
             length = f1.read(buffer);
             if (length <= 0)
                 break;
-            int[] temp = new int[length / 4];
-            for (int i = 0; i < length / 4; i++)
-                temp[i] = buffer.getInt(i*4);
-            Arrays.sort(temp);
-            int start = buffer.capacity() - length;
-            buffer.position(start);
-            for (int i : temp)
-                buffer.putInt(i);
-            buffer.position(start);
+            buffer.position(0);
+            BufferSortQuickSort.quickSort(buffer.asIntBuffer(),0,length/4);
+            buffer.flip();
             f2.write(buffer);
         }
     }
