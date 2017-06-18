@@ -18,15 +18,15 @@ public final class Position{
     }
 
     public int getNext(int amount, ByteBuffer buffer) throws IOException{
-        assert buffer.capacity() >= amount * 4;
+        buffer.position(0);
+        buffer.limit(amount * 4);
         if (position - Start_Position == Initial_Size)
             return 0;
         file.position(position * 4);
         assert (position - Start_Position) <= Initial_Size;
         int length = Math.min(amount, Start_Position + Initial_Size - position);
-        buffer.position(0);
         int read = file.read(buffer);
-        assert (read == length * 4);
+        assert (read >= length * 4);
         position+=length;
         return length;
     }
