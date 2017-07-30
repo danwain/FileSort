@@ -42,7 +42,6 @@ public class BufferSortQuickSort {
         quickSort(i,0,i.capacity());
     }
 
-
     public static void quickSort(IntBuffer buffer, int start, int end){
         assert buffer != null;
         if (end - start <= 1)
@@ -56,14 +55,17 @@ public class BufferSortQuickSort {
     private static int partition(IntBuffer buffer, int start, int end){
         int il = start;
         int ir = end - 1;
-        int pivot = buffer.get(ir);
+        int average = (int) ((il +ir) / 2);
+        average = ir;
+        assert (average <= ir && average >= il);
+        int pivot = buffer.get(average);
         int temp;
         while (ir > il){
-            if (buffer.get(ir - 1) > pivot){
-                buffer.put(ir, buffer.get(ir - 1));
+            temp = buffer.get(ir - 1);
+            if (temp > pivot){
+                buffer.put(ir, temp);
                 ir--;
             } else {
-                temp = buffer.get(ir - 1);
                 buffer.put(ir - 1, buffer.get(il));
                 buffer.put(il, temp);
                 il++;
