@@ -11,6 +11,6 @@ public final class Number implements Comparable<Number> {
 
     @Override
     public int compareTo(Number number) {
-        return this.number - number.number;
+        return Integer.compare(this.number, number.number);
     }
 }
