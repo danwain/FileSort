@@ -9,13 +9,14 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.*;
 
-public class External {
+public final class External {
     private final int size; //Array Size
     private final String to;
     private final String from;
     private final FileChannel f1;
     private final FileChannel f2;
     private final int Total_ints;
+    private final int fileSize;
     private final int groups;
     private final Set<Position> positions;
 
@@ -24,18 +25,47 @@ public class External {
         this.from = p1;
         this.to = p2;
         this.f1 = new RandomAccessFile(p1,"rw").getChannel();
+        this.fileSize = (int) f1.size();
         this.f2 = new RandomAccessFile(p2,"rw").getChannel();
-        this.Total_ints = (int) f1.size() / 4;
+        this.Total_ints = (int) fileSize / 4;
         this.groups = Helper.roundUp(Total_ints, size);
         this.positions = new LinkedHashSet<>();
     }
 
-    public void sort() throws IOException, IllegalArgumentException{
-        //System.out.println(Helper.FileToString(new RandomAccessFile(from,"rw")));
-        //initialSort(f1,f2, ByteBuffer.allocate(size*4));
-        //System.out.println(Helper.FileToString(new RandomAccessFile(to,"rw")));
-        merge();
-        //System.out.println(Helper.FileToString(new RandomAccessFile(from,"r")));
+    public final void sort() throws IOException, IllegalArgumentException{
+        if (this.fileSize <= this.size) {
+            long start = System.nanoTime();
+            SortInMemory(f1, fileSize, Total_ints);
+            long end = System.nanoTime();
+            //System.out.println("Ram took " + (end - start) + " nano seconds");
+        } else {
+            long start = System.nanoTime();
+            //System.out.println(Helper.FileToString(new RandomAccessFile(from,"rw")));
+            initialSort(f1, f2, ByteBuffer.allocate(size * 4));
+            long end = System.nanoTime();
+            System.out.println((end - start) + " nano seconds (initial)");
+            //System.out.println(size);
+            //System.out.println(Helper.FileToString(new RandomAccessFile(to,"rw")));
+            start = System.nanoTime();
+            merge();
+            end = System.nanoTime();
+            System.out.println((end - start) + " nano seconds (merge)");
+            //System.out.println(Helper.FileToString(new RandomAccessFile(from,"r")));
+        }
+    }
+
+    private static void SortInMemory(FileChannel f, int fileSize, int totalInts) throws IOException{
+        //System.out.print("in Ram ");
+        if (totalInts <= 1)
+            return;
+        f.position(0);
+        ByteBuffer buffer = ByteBuffer.allocate(fileSize);
+        int read = f.read(buffer);
+        buffer.position(0);
+        BufferSortQuickSort.quickSort(buffer.asIntBuffer(), 0, totalInts);
+        buffer.position(0);
+        f.position(0);
+        f.write(buffer);
     }
 
     public void merge() throws IOException{
