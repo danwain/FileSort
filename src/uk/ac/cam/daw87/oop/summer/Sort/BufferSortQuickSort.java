@@ -52,10 +52,17 @@ public class BufferSortQuickSort {
         quickSort(buffer, m+1, end);
     }
 
+    private static void swapp(IntBuffer buffer, int a, int b){
+        int temp = buffer.get(a);
+        buffer.put(a, buffer.get(b));
+        buffer.put(b, temp);
+    }
+
     private static int partition(IntBuffer buffer, int start, int end){
         int il = start;
         int ir = end - 1;
         int average = (int) ((il +ir) / 2);
+        swapp(buffer, average, ir);
         average = ir;
         assert (average <= ir && average >= il);
         int pivot = buffer.get(average);
