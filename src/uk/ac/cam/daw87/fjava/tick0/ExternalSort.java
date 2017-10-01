@@ -6,13 +6,12 @@ import java.io.IOException;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import uk.ac.cam.daw87.oop.summer.Sort.External;
 
 public class ExternalSort {
 
     public static void sort(String f1, String f2) throws FileNotFoundException, IOException {
         //TODO: Find best size of merge
-        External e = new External(9000, f1, f2);
+        External e = new External(4000, f1, f2);
         e.sort();
     }
 
