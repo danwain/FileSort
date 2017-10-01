@@ -1,42 +1,47 @@
 package uk.ac.cam.daw87.fjava.tick0.helpers;
 
+import java.util.Arrays;
+
 public class BinaryHeap {
     private int[][] Heap;
     private int[] temp;
+    private int[] returnTemp;
     private int HeapSize;
-    private boolean Clean;
+    //private boolean Clean;
 
     public BinaryHeap(int size){
         HeapSize = 0;
         Heap = new int[size][2];
-        Clean = true;
+        //Clean = true;
         temp = new int[2];
+        returnTemp = new int[2];
     }
 
     public void insert(int number, int filePosition){
         Heap[HeapSize][0] = number;
         Heap[HeapSize][1] = filePosition;
         HeapSize++;
-        Clean = false;
+        //Clean = false;
+        heapifyUP();
     }
 
     public void heapifyUP(){
-        int index = HeapSize;
+        int index = HeapSize - 1;
 
         while (hasParent(index) && parent(index)[0] > Heap[index][0]){
             swap(index, parentIndex(index));
             index = parentIndex(index);
         }
 
-        Clean = true;
+        //Clean = true;
     }
 
     private void heapifyDown(){
-        int index = 1;
+        int index = 0;
 
         while (hasLeftChild(index)){
             int smallest = leftIndex(index);
-
+            assert smallest > 0;
             if (hasRightChild(index) && Heap[smallest][0] > Heap[rightIndex(index)][0]){
                 smallest = rightIndex(index);
             }
@@ -56,31 +61,31 @@ public class BinaryHeap {
     }
 
     private static boolean hasParent(int i) {
-        return i > 1;
+        return i > 0;
     }
 
 
     private static int leftIndex(int i) {
-        return i * 2;
-    }
-
-
-    private static int rightIndex(int i) {
         return i * 2 + 1;
     }
 
 
+    private static int rightIndex(int i) {
+        return i * 2 + 2;
+    }
+
+
     private boolean hasLeftChild(int i) {
-        return leftIndex(i) <= HeapSize;
+        return leftIndex(i) < HeapSize;
     }
 
 
     private boolean hasRightChild(int i) {
-        return rightIndex(i) <= HeapSize;
+        return rightIndex(i) < HeapSize;
     }
 
     private static int parentIndex(int i) {
-        return i / 2;
+        return (i-1) / 2;
     }
 
     private int[] parent(int i) {
@@ -101,11 +106,23 @@ public class BinaryHeap {
 
 
     public int[] getMin(){
-        assert Clean;
-        int[] min = Heap[0];
+        //assert Clean;
+
+        returnTemp[0] = Heap[0][0];
+        returnTemp[1] = Heap[0][1];
+        swap(0, HeapSize - 1);
+
         HeapSize--;
         heapifyDown();
-        return min;
+        return returnTemp;
     }
 
+    @Override
+    public String toString() {
+        int[] tempArray = new int[HeapSize];
+        for (int i = 0; i < HeapSize; i++) {
+            tempArray[i] = Heap[i][0];
+        }
+        return Arrays.toString(tempArray);
+    }
 }

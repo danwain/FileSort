@@ -5,16 +5,18 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
 public final class Position{
-    private final int Initial_Size;
-    private final int Start_Position;
+    public final int Initial_Size;
+    public final int Start_Position;
     private int position;
-    private final FileChannel file;
+    public final FileChannel file;
+    public int amountInHeap;
 
     public Position(int start, int size, FileChannel file){
         Initial_Size = size;
         Start_Position = start;
         position = Start_Position;
         this.file = file;
+        amountInHeap = 0;
     }
 
     public final int getNext(int amount, ByteBuffer buffer) throws IOException{

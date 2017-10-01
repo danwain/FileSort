@@ -1,9 +1,6 @@
 package uk.ac.cam.daw87.fjava.tick0;
 
-import uk.ac.cam.daw87.fjava.tick0.helpers.Number;
-import uk.ac.cam.daw87.fjava.tick0.helpers.Position;
-import uk.ac.cam.daw87.fjava.tick0.helpers.Helper;
-import uk.ac.cam.daw87.fjava.tick0.helpers.Sorters;
+import uk.ac.cam.daw87.fjava.tick0.helpers.*;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -14,25 +11,19 @@ import java.util.*;
 
 public final class External {
     private final int size; //Array Size
-    private final String to;
-    private final String from;
     private final FileChannel f1;
     private final FileChannel f2;
     private final int Total_ints;
     private final int fileSize;
     private final int groups;
-    private final Set<Position> positions;
 
     public External(int size, String p1, String p2) throws FileNotFoundException, IOException {
         this.size = size;
-        this.from = p1;
-        this.to = p2;
         this.f1 = new RandomAccessFile(p1,"rw").getChannel();
         this.fileSize = (int) f1.size();
         this.f2 = new RandomAccessFile(p2,"rw").getChannel();
         this.Total_ints = (int) fileSize / 4;
         this.groups = Helper.roundUp(Total_ints, size);
-        this.positions = new LinkedHashSet<>();
     }
 
     public final void sort() throws IOException, IllegalArgumentException{
@@ -73,41 +64,61 @@ public final class External {
 
     public void merge() throws IOException{
         f2.position(0);
-        for (int i = 0; i < groups - 1 ; i++)
-            positions.add(new Position(i*size,size,f2));
-        positions.add(new Position(positions.size()*size,Total_ints - (positions.size()*size),f2));
-
-        Queue<Number> queue = new PriorityQueue<>();
-        Map<Position, Integer> amounts = new HashMap<>();
-        ByteBuffer write = ByteBuffer.allocate(size);
-        int amount_in_each = (size * 3) / groups;
-        ByteBuffer buffer = ByteBuffer.allocate(amount_in_each * 4);
-        for (Position p : positions){
-            int length = p.getNext(amount_in_each, buffer);
-            for (int i = 0; i < length; i++)
-                queue.add(new Number(buffer.getInt(i*4),p));
-            amounts.put(p,length);
+        Map<Integer, Position> lookup = new HashMap<>();
+        for (int i = 0; i < groups - 1 ; i++) {
+            Position p = new Position(i * size, size, f2);
+            lookup.put(p.Start_Position, p);
         }
+        Position last_position = new Position(lookup.size()*size,Total_ints - (lookup.size()*size), f2);
+        lookup.put(last_position.Start_Position, last_position);
+
+        int amount_in_each = (size * 3) / groups;
+
+        BinaryHeap heap = new BinaryHeap(lookup.size() * amount_in_each);
+
+        ByteBuffer write = ByteBuffer.allocate(size);
+        ByteBuffer buffer = ByteBuffer.allocate(amount_in_each * 4);
+
+        for (Position p : lookup.values()){
+            int length = p.getNext(amount_in_each, buffer);
+            for (int i = 0; i < length; i++){
+                heap.insert(buffer.getInt(i*4), p.Start_Position);
+            }
+            assert p.amountInHeap == 0;
+            p.amountInHeap = length;
+        }
+        heap.heapifyUP();
+
         f1.position(0);
-        while (!queue.isEmpty()){
+        while (!heap.isEmpty()){
             if (write.position() + 4 > write.capacity()){
                 write.flip();
                 f1.write(write);
                 write.clear();
             }
-            Number n = queue.poll();
-            assert amounts.get(n.group) > 0;
-            if (amounts.get(n.group) == 1){
-                int length = n.group.getNext(amount_in_each, buffer);
-                if (length != 0){
-                    for (int i = 0; i < length; i++)
-                        queue.add(new Number(buffer.getInt(i*4),n.group));
-                    amounts.put(n.group,length);
-                } else amounts.put(n.group,0);
-            } else {
-                amounts.put(n.group, amounts.get(n.group) - 1);
+            int[] min = heap.getMin();
+            Position position = lookup.get(min[1]);
+            if (position.amountInHeap <= 0) {
+                System.out.println(position);
+                System.out.println(min[0]);
+                System.out.println(position.amountInHeap);
             }
-            write.putInt(n.number);
+            assert position.amountInHeap > 0;
+            if (position.amountInHeap == 1){
+                int length = position.getNext(amount_in_each, buffer);
+                if (length != 0){
+                    for (int i = 0; i < length; i++) {
+                        heap.insert(buffer.getInt(i * 4), position.Start_Position);
+                    }
+                    heap.heapifyUP();
+                    position.amountInHeap = length;
+                } else {
+                    position.amountInHeap = 0;
+                }
+            } else {
+                position.amountInHeap--;
+            }
+            write.putInt(min[0]);
         }
         write.flip();
         f1.write(write);
