@@ -13,21 +13,29 @@ public class BinaryHeap {
         assert size >= 0;
         HeapSize = 0;
         Heap = new int[size][2];
-        //Clean = true;
         temp = new int[2];
         returnTemp = new int[2];
     }
 
     public void insert(int number, int filePosition){
+        addNoHeaify(number, filePosition);
+        heapifyUP();
+    }
+
+    public void addNoHeaify(int number, int filePosition){
         assert HeapSize <= Heap.length;
         Heap[HeapSize][0] = number;
         Heap[HeapSize][1] = filePosition;
         HeapSize++;
-        //Clean = false;
-        heapifyUP();
     }
 
-    public void heapifyUP(){
+    public void build(){
+        for (int i = HeapSize / 2; i > 0 ; i--) {
+            heapifyDown(i);
+        }
+    }
+
+    private void heapifyUP(){
         int index = HeapSize - 1;
 
         while (hasParent(index) && parent(index)[0] > Heap[index][0]){
@@ -38,8 +46,8 @@ public class BinaryHeap {
         //Clean = true;
     }
 
-    private void heapifyDown(){
-        int index = 0;
+    private void heapifyDown(int start){
+        int index = start;
 
         while (hasLeftChild(index)){
             int smallest = leftIndex(index);
@@ -81,7 +89,6 @@ public class BinaryHeap {
         return leftIndex(i) < HeapSize;
     }
 
-
     private boolean hasRightChild(int i) {
         return rightIndex(i) < HeapSize;
     }
@@ -112,10 +119,10 @@ public class BinaryHeap {
         assert !isEmpty();
         returnTemp[0] = Heap[0][0];
         returnTemp[1] = Heap[0][1];
-        swap(0, HeapSize - 1);
+        swap( 0, HeapSize - 1);
 
         HeapSize--;
-        heapifyDown();
+        heapifyDown(0);
         return returnTemp;
     }
 
