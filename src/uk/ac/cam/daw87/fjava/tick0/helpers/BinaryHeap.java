@@ -10,6 +10,7 @@ public class BinaryHeap {
     //private boolean Clean;
 
     public BinaryHeap(int size){
+        assert size >= 0;
         HeapSize = 0;
         Heap = new int[size][2];
         //Clean = true;
@@ -18,6 +19,7 @@ public class BinaryHeap {
     }
 
     public void insert(int number, int filePosition){
+        assert HeapSize <= Heap.length;
         Heap[HeapSize][0] = number;
         Heap[HeapSize][1] = filePosition;
         HeapSize++;
@@ -107,7 +109,7 @@ public class BinaryHeap {
 
     public int[] getMin(){
         //assert Clean;
-
+        assert !isEmpty();
         returnTemp[0] = Heap[0][0];
         returnTemp[1] = Heap[0][1];
         swap(0, HeapSize - 1);
