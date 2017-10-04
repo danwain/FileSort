@@ -2,13 +2,11 @@ package uk.ac.cam.daw87.fjava.tick0;
 
 import uk.ac.cam.daw87.fjava.tick0.helpers.*;
 
-import java.awt.*;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.nio.channels.FileChannel;
-import java.util.*;
 
 public final class External {
     private final static int InitialSortSize = 756490;//(10000000 / 4) - 1000000;
@@ -48,13 +46,13 @@ public final class External {
             //System.out.println(Helper.FileToString(new RandomAccessFile(from,"rw")));
             initialSort(f1, f2);
             long end = System.nanoTime();
-            System.out.println((end - start) + " nano seconds (initial)");
+            System.out.println("Initial sort          : " + (end - start));
             //System.out.println(size);
             //System.out.println(Helper.FileToString(new RandomAccessFile(to,"rw")));
             start = System.nanoTime();
             merge(f1, f2, groups, Total_ints, fileSize);
             end = System.nanoTime();
-            System.out.println((end - start) + " nano seconds (merge)");
+            System.out.println("Merge                 : " + (end - start));
             //System.out.println(Helper.FileToString(new RandomAccessFile(from,"r")));
         }
     }
@@ -93,7 +91,7 @@ public final class External {
         lookup[groups - 1][0] = fileSize;
         lookup[groups - 1][1] = (groups - 1) * InitialSortSize * 4;
         end = System.nanoTime();
-        System.out.println("Lookup setup: " + (end - start));
+        System.out.println("Lookup setup          : " + (end - start));
 
         start = System.nanoTime();
         int amount_in_each = MaxHeapSize / groups;
@@ -114,17 +112,27 @@ public final class External {
         heap.build();
         end = System.nanoTime();
 
-        System.out.println("Heap setup : " + (end - start));
+        System.out.println("Heap setup            : " + (end - start));
 
+        long[] starts = new long[3];
+        long[] ends = new long[3];
+        long[] totals = new long[3];
 
         while (!heap.isEmpty()){
+            starts[0] = System.nanoTime();
             if (write.position() + 4 > WriterSize){
                 write.flip();
                 f1.write(write);
                 write.clear();
             }
+            ends[0] = System.nanoTime();
+            totals[0] += ends[0] - starts[0];
+            starts[1] = System.nanoTime();
             int[] min = heap.getMin();
+            ends[1] = System.nanoTime();
+            totals[1] += ends[1] - starts[1];
             assert lookup[min[1]][2] > 0; // amount in heap
+            starts[2] = System.nanoTime();
             if (lookup[min[1]][2] == 1){
                 int length = readBuffer(buffer, f2, lookup, min[1], amount_in_each);
                 for (int i = 0; i < length; i++) {
@@ -134,8 +142,13 @@ public final class External {
             } else {
                 lookup[min[1]][2]--;
             }
+            ends[2] = System.nanoTime();
+            totals[2] += ends[2] - starts[2];
             write.putInt(min[0]);
         }
+        System.out.println("Time spent writing    : " + totals[0]);
+        System.out.println("Time spent Finding min: " + totals[1]);
+        System.out.println("Time spent Reading    : " + totals[2]);
         write.flip();
         f1.write(write);
     }
