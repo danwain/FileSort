@@ -9,10 +9,9 @@ import java.security.NoSuchAlgorithmException;
 
 public class ExternalSort {
 
-    public static void sort(String f1, String f2) throws FileNotFoundException, IOException {
+    public static void sort(String f1, String f2) throws IOException {
         //TODO: Find best size of merge
-        External e = new External(4000, f1, f2);
-        e.sort();
+        External.sort(f1, f2);
     }
 
     private static String byteToHex(byte b) {
