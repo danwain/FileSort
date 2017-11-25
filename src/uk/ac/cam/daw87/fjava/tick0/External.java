@@ -86,10 +86,8 @@ public final class External {
             return initialRead(f2, lookup, i, size, readDone);
         });
 
-        int HeapSize = 0;
-        final int[][] heap = new int[groups][2];
-        final int[] temp = new int[2];
-        final int[] returnTemp = new int[2];
+        final BinaryHeap heap = new BinaryHeap(groups);
+        int[] returnTemp;
 
         ByteBuffer write = ByteBuffer.allocate(WRITER_SIZE);
         ByteBuffer writeWaiting = ByteBuffer.allocate(WRITER_SIZE);
@@ -98,13 +96,11 @@ public final class External {
         for (int k = 0; k < lookup.length; k++) {
             boolean test = readBuffer(f2, lookup, k, amount_in_each, readCache, readCacheWaiting, readDone);
             assert test;
-            BinaryHeap.addNoHeaify(heap, HeapSize, readCache[k].getInt(), k);
-            HeapSize++;
+            heap.addNoHeaify(readCache[k].getInt(), k);
         }
-        BinaryHeap.build(heap, HeapSize, temp);
+        heap.build();
 
-        assert HeapSize > 0;
-        while (!BinaryHeap.isEmpty(HeapSize)){
+        while (!heap.isEmpty()) {
             if (write.position() + 4 > WRITER_SIZE){
                 write.flip();
                 if (futureWrite != null) {
@@ -118,14 +114,12 @@ public final class External {
                 writeIndex += WRITER_SIZE;
                 write.clear();
             }
-            BinaryHeap.peek(heap, HeapSize, returnTemp);
+            returnTemp = heap.peek();
             if (readCache[returnTemp[1]].remaining() >= 4 || readBuffer(f2, lookup, returnTemp[1], amount_in_each, readCache, readCacheWaiting, readDone)) {
                 assert readCache[returnTemp[1]].remaining() >= 4;
-                heap[0][0] = readCache[returnTemp[1]].getInt();
-                BinaryHeap.heapifyDown(heap, HeapSize, 0, temp);
+                heap.replaceMin(readCache[returnTemp[1]].getInt(), returnTemp[1]);
             } else {
-                BinaryHeap.getMin(heap, HeapSize, returnTemp, temp);
-                HeapSize--;
+                heap.getMin();
             }
             write.putInt(returnTemp[0]);
         }
