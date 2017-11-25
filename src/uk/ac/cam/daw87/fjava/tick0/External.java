@@ -5,10 +5,8 @@ import uk.ac.cam.daw87.fjava.tick0.helpers.*;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.FileChannel;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
@@ -16,11 +14,10 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 public final class External {
-    private final static int InitialSortSize = 756490;//(10000000 / 4) - 1000000;
-    private final static int InMemorySort =  1;//10000000 - 500;
-    private final static int InMemoryRadix = 1000000;
-    private final static int MaxHeapSize = 1000000;//244000;//((((10000000 / 4) - 3000000) / 5) * 4 ) / 2;
-    private final static int WriterSize = 300000;//(((10000000 / 4) - 3000000) / 5);
+    private final static int INITIAL_SORT_SIZE = 756490;
+    private final static int IN_MEMORY_RADIX = 1000000;
+    private final static int MAX_HEAP_SIZE = 1000000;
+    private final static int WRITER_SIZE = 300000;
 
     public static void sort(String p1, String p2) throws IOException, IllegalArgumentException, InterruptedException, ExecutionException{
         FileChannel f1 = new RandomAccessFile(p1,"rw").getChannel();
@@ -31,73 +28,49 @@ public final class External {
         final int totalInts = fileSize >> 2;
 
         if (fileSize <= 4){
-            return;
-        } else if (fileSize <= InMemoryRadix){
-            SortInMemory(f1, fileSize, totalInts, true);
-        } else if (fileSize <= InMemorySort) {
-            //System.out.println("Ram sort");
-            //long start = System.nanoTime();
-            SortInMemory(f1, fileSize, totalInts, false);
-            //long end = System.nanoTime();
-            //System.out.println("Ram took " + (end - start) + " nano seconds");
+            return; // already sorted
+        } else if (fileSize <= IN_MEMORY_RADIX){
+            sortInMemory(f1, fileSize, totalInts);
         } else {
-            //long start = System.nanoTime();
-            //System.out.println(Helper.FileToString(new RandomAccessFile(from,"rw")));
             initialSort(f1, f2);
-            //long end = System.nanoTime();
-            //System.out.println("Initial sort          : " + (end - start));
-            //System.out.println(size);
-            //System.out.println(Helper.FileToString(new RandomAccessFile(to,"rw")));
-            //start = System.nanoTime();
-            int groups = Helper.roundUp(totalInts, InitialSortSize);
+            int groups = Helper.roundUp(totalInts, INITIAL_SORT_SIZE);
             merge(f1a, f2a, groups, fileSize, p1, p2);
-            //end = System.nanoTime();
-            //System.out.println("Merge                 : " + (end - start));
-            //System.out.println(Helper.FileToString(new RandomAccessFile(from,"r")));
         }
     }
 
-    private static void SortInMemory(FileChannel f, int fileSize, int totalInts, boolean radix) throws IOException{
-        //System.out.println("in Ram ");
-        if (totalInts <= 1)
-            return;
+    private static void sortInMemory(FileChannel f, int fileSize, int totalInts) throws IOException{
         f.position(0);
         ByteBuffer buffer = ByteBuffer.allocate(fileSize);
         int read = f.read(buffer);
         assert read == totalInts * 4;
         buffer.position(0);
-        if (radix){
-            Sorters.RadixSort(buffer.array(), 0, fileSize);
-        } else {
-            Sorters.quickSort(buffer.asIntBuffer(), 0, totalInts);
-        }
+        Sorters.RadixSort(buffer.array(), 0, fileSize);
         buffer.position(0);
         f.position(0);
         f.write(buffer);
     }
 
     private static void merge(AsynchronousFileChannel f1, AsynchronousFileChannel f2, int groups, int fileSize, String p1, String p2) throws IOException, InterruptedException, ExecutionException{
-        //long start, end;
-        //System.out.println(groups);
         assert groups >= 1;
 
-        //start = System.nanoTime();
-        final int amount_in_each = MaxHeapSize / groups;
+        final int amount_in_each = MAX_HEAP_SIZE / groups;
+        assert amount_in_each > 0;
+
         int writeIndex = 0;
         int[][] lookup = new int[groups][2];
         ByteBuffer[] readCache = new ByteBuffer[groups];
         ByteBuffer[] readCacheWaiting = new ByteBuffer[groups];
         Future<Integer> [] readDone = new Future[groups];
         for (int i = 0; i < groups - 1; i++) {
-            lookup[i][0] = (i + 1) * InitialSortSize * 4;
-            lookup[i][1] = i * InitialSortSize * 4;
+            lookup[i][0] = (i + 1) * INITIAL_SORT_SIZE * 4;
+            lookup[i][1] = i * INITIAL_SORT_SIZE * 4;
         }
         lookup[groups - 1][0] = fileSize;
-        lookup[groups - 1][1] = (groups - 1) * InitialSortSize * 4;
+        lookup[groups - 1][1] = (groups - 1) * INITIAL_SORT_SIZE * 4;
         Arrays.parallelSetAll(readCache, i -> {
             int size;
             if (i == groups - 1){
-                size = (Math.min(fileSize - (groups - 1) * InitialSortSize * 4, amount_in_each) / 4) * 4;
+                size = (Math.min(fileSize - (groups - 1) * INITIAL_SORT_SIZE * 4, amount_in_each) / 4) * 4;
             } else {
                 size = amount_in_each * 4;
             }
@@ -106,48 +79,33 @@ public final class External {
         Arrays.parallelSetAll(readCacheWaiting, i -> {
             int size;
             if (i == groups - 1){
-                size = (Math.min(fileSize - (groups - 1) * InitialSortSize * 4, amount_in_each) / 4) * 4;
+                size = (Math.min(fileSize - (groups - 1) * INITIAL_SORT_SIZE * 4, amount_in_each) / 4) * 4;
             } else {
                 size = amount_in_each * 4;
             }
             return initialRead(f2, lookup, i, size, readDone);
         });
 
-        //end = System.nanoTime();
-        //System.out.println("Lookup setup          : " + (end - start));
-
-        //start = System.nanoTime();
-
-        assert amount_in_each > 0;
-
-        //BinaryHeap heap = new BinaryHeap(MaxHeapSize);
         int HeapSize = 0;
-        final int[][] Heap = new int[groups][2];
+        final int[][] heap = new int[groups][2];
         final int[] temp = new int[2];
         final int[] returnTemp = new int[2];
 
-        ByteBuffer write = ByteBuffer.allocate(WriterSize);
-        ByteBuffer writeWaiting = ByteBuffer.allocate(WriterSize);
+        ByteBuffer write = ByteBuffer.allocate(WRITER_SIZE);
+        ByteBuffer writeWaiting = ByteBuffer.allocate(WRITER_SIZE);
         ByteBuffer tempByteBuffer;
         Future<Integer> futureWrite = null;
         for (int k = 0; k < lookup.length; k++) {
             boolean test = readBuffer(f2, lookup, k, amount_in_each, readCache, readCacheWaiting, readDone);
             assert test;
-            BinaryHeap.addNoHeaify(Heap, HeapSize, readCache[k].getInt(), k);
+            BinaryHeap.addNoHeaify(heap, HeapSize, readCache[k].getInt(), k);
             HeapSize++;
         }
-        BinaryHeap.build(Heap, HeapSize, temp);
-        //end = System.nanoTime();
+        BinaryHeap.build(heap, HeapSize, temp);
 
-        //System.out.println("Heap setup            : " + (end - start));
-
-        //long[] starts = new long[3];
-        //long[] ends = new long[3];
-        //long[] totals = new long[3];
         assert HeapSize > 0;
         while (!BinaryHeap.isEmpty(HeapSize)){
-            //starts[0] = System.nanoTime();
-            if (write.position() + 4 > WriterSize){
+            if (write.position() + 4 > WRITER_SIZE){
                 write.flip();
                 if (futureWrite != null) {
                     futureWrite.get();
@@ -157,114 +115,26 @@ public final class External {
                 writeWaiting = tempByteBuffer;
 
                 futureWrite = f1.write(writeWaiting, writeIndex);
-                writeIndex += WriterSize;
+                writeIndex += WRITER_SIZE;
                 write.clear();
             }
-            //ends[0] = System.nanoTime();
-            //totals[0] += ends[0] - starts[0];
-            //starts[1] = System.nanoTime();
-            BinaryHeap.peek(Heap, HeapSize, returnTemp);
+            BinaryHeap.peek(heap, HeapSize, returnTemp);
             if (readCache[returnTemp[1]].remaining() >= 4 || readBuffer(f2, lookup, returnTemp[1], amount_in_each, readCache, readCacheWaiting, readDone)) {
                 assert readCache[returnTemp[1]].remaining() >= 4;
-                Heap[0][0] = readCache[returnTemp[1]].getInt();
-                BinaryHeap.heapifyDown(Heap, HeapSize, 0, temp);
+                heap[0][0] = readCache[returnTemp[1]].getInt();
+                BinaryHeap.heapifyDown(heap, HeapSize, 0, temp);
             } else {
-                BinaryHeap.getMin(Heap, HeapSize, returnTemp, temp);
+                BinaryHeap.getMin(heap, HeapSize, returnTemp, temp);
                 HeapSize--;
             }
-            //ends[2] = System.nanoTime();
-            //totals[2] += ends[2] - starts[2];
             write.putInt(returnTemp[0]);
         }
-        //System.out.println("Time spent writing    : " + totals[0]);
-        //System.out.println("Time spent Finding min: " + totals[1]);
-        //System.out.println("Time spent Reading    : " + totals[2]);
-        assert checkAllwrited(lookup, fileSize);
-        //assert checkBuffers(readCache);
-        futureWrite.get();
+        if (futureWrite != null)
+            futureWrite.get();
         write.flip();
         f1.write(write, writeIndex);
     }
 
-    private static boolean checkBuffers(ByteBuffer[] buffers){
-        for (ByteBuffer b : buffers){
-            if (b.limit() != 0)
-                return false;
-        }
-        return true;
-    }
-
-
-    private static boolean checkAllwrited(int[][] lookup, int filesize){
-        for (int i = 0; i < lookup.length - 1; i++) {
-            if (lookup[i][1] != lookup[i][0])
-                return false;
-        }
-        if (lookup[lookup.length - 1][0] == filesize) {
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    private static void arrayMerge(FileChannel f1, FileChannel f2, int totalInts) throws IOException{
-        assert false;
-        int b1start = 0;
-        int b2start = 0;
-        int b1end, b2end;
-        int Part1Index = 0;
-        int Part2Index = InitialSortSize * 4;
-        final ByteBuffer b1 = ByteBuffer.allocate(MaxHeapSize * 4);
-        final ByteBuffer b2 = ByteBuffer.allocate(MaxHeapSize * 4);
-        f2.position(0);
-        f1.position(0);
-        b1end = f2.read(b1);
-        f2.position(Part2Index);
-        b2end = f2.read(b2);
-
-        final ByteBuffer write = ByteBuffer.allocate(WriterSize);
-
-        while (Part1Index < InitialSortSize * 4 && Part2Index < totalInts * 4){
-            if (write.position() + 4 > WriterSize){
-                write.flip();
-                f1.write(write);
-                write.clear();
-            }
-            assert b1start <= b1end;
-            assert b2start <= b2end;
-            if (b1start == b1end){
-                b1.clear();
-                b1start = 0;
-                f2.position(Part1Index);
-                b1end = f2.read(b1);
-                b1.limit(b1end);
-            } else if (b2start == b2end) {
-                b2.clear();
-                b2start = 0;
-                f2.position(Part2Index);
-                b2end = f2.read(b2);
-                b2.limit(b2end);
-            }
-            if (b1.getInt(b1start) < b2.getInt(b2start)){
-                write.putInt(b1.getInt(b1start));
-                b1start+=4;
-                Part1Index+=4;
-            } else {
-                write.putInt(b2.getInt(b2start));
-                b2start+=4;
-                Part2Index+=4;
-            }
-        }
-        write.flip();
-        f1.write(write);
-        b2.position(b2start);
-        b1.position(b1start);
-        if (Part1Index < InitialSortSize) {
-            f1.write(b1);
-        } else if (Part2Index < totalInts * 4){
-            f1.write(b2);
-        }
-    }
 
     private static boolean readBuffer(AsynchronousFileChannel file, int[][] positions, int i, int toRead, ByteBuffer[] readCache, ByteBuffer[] readCacheWaiting, Future<Integer>[] readFutures) throws IOException, InterruptedException, ExecutionException{
         final int end = positions[i][0];
@@ -290,6 +160,7 @@ public final class External {
         }
 
         positions[i][1] = index;
+        assert index <= end;
         assert (readCache[i].limit() / 4) * 4 == readCache[i].limit();
         return readCache[i].limit() != 0;
     }
@@ -307,11 +178,7 @@ public final class External {
     }
 
     private  static void initialSort(FileChannel f1, FileChannel f2) throws IOException {
-        //TODO: Sort better (maybe radix/bucket)
-        //f1.position(0);
-        //f2.position(0);
-        ByteBuffer buffer = ByteBuffer.allocate(InitialSortSize << 2);
-        //IntBuffer intBuffer = buffer.asIntBuffer();
+        ByteBuffer buffer = ByteBuffer.allocate(INITIAL_SORT_SIZE << 2);
         byte[] array = buffer.array();
         int length;
         while (true) {
@@ -320,8 +187,6 @@ public final class External {
             if (length <= 0)
                 break;
             buffer.position(0);
-
-            //Sorters.quickSort(intBuffer, 0, length / 4);
             Sorters.RadixSort(array, 0, length);
             buffer.position(0);
             buffer.limit(length);

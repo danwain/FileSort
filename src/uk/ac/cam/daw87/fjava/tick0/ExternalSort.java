@@ -6,11 +6,11 @@ import java.io.IOException;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.concurrent.ExecutionException;
 
 public class ExternalSort {
 
-    public static void sort(String f1, String f2) throws IOException {
-        //TODO: Find best size of merge
+    public static void sort(String f1, String f2) throws IOException, InterruptedException, ExecutionException {
         External.sort(f1, f2);
     }
 
