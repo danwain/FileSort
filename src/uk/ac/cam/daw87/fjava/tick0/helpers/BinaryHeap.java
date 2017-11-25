@@ -1,63 +1,46 @@
 package uk.ac.cam.daw87.fjava.tick0.helpers;
 
-import java.util.Arrays;
 
 public class BinaryHeap {
-    private int[][] Heap;
-    private int[] temp;
-    private int[] returnTemp;
-    private int HeapSize;
-    //private boolean Clean;
-
-    public BinaryHeap(int size){
-        assert size >= 0;
-        HeapSize = 0;
-        Heap = new int[size][2];
-        temp = new int[2];
-        returnTemp = new int[2];
+    public static void insert(int[][] Heap, int HeapSize, int number, int filePosition, int[] temp){
+        addNoHeaify(Heap, HeapSize, number, filePosition);
+        heapifyUP(Heap, HeapSize + 1, temp);
     }
 
-    public void insert(int number, int filePosition){
-        addNoHeaify(number, filePosition);
-        heapifyUP();
-    }
-
-    public void addNoHeaify(int number, int filePosition){
+    public static void addNoHeaify(int[][] Heap, int HeapSize, int number, int filePosition){
         assert HeapSize <= Heap.length;
         Heap[HeapSize][0] = number;
         Heap[HeapSize][1] = filePosition;
-        HeapSize++;
+        //HeapSize++;
     }
 
-    public void build(){
-        for (int i = HeapSize / 2; i > 0 ; i--) {
-            heapifyDown(i);
+    public static void build(int[][] Heap, int HeapSize, int[] temp){
+        for (int i = (HeapSize + 1) / 2; i >= 0 ; i--) {
+            heapifyDown(Heap, HeapSize, i, temp);
         }
     }
 
-    private void heapifyUP(){
+    private static void heapifyUP(int[][] Heap, int HeapSize, int[] temp){
         int index = HeapSize - 1;
 
-        while (hasParent(index) && parent(index)[0] > Heap[index][0]){
-            swap(index, parentIndex(index));
+        while (hasParent(index) && parent(Heap, index)[0] > Heap[index][0]){
+            swap(Heap, index, parentIndex(index), temp);
             index = parentIndex(index);
         }
-
-        //Clean = true;
     }
 
-    private void heapifyDown(int start){
+    public static void heapifyDown(int[][] Heap, int HeapSize, int start, int[] temp){
         int index = start;
 
-        while (hasLeftChild(index)){
+        while (hasLeftChild(index, HeapSize)){
             int smallest = leftIndex(index);
             assert smallest > 0;
-            if (hasRightChild(index) && Heap[smallest][0] > Heap[rightIndex(index)][0]){
+            if (hasRightChild(index, HeapSize) && Heap[smallest][0] > Heap[rightIndex(index)][0]){
                 smallest = rightIndex(index);
             }
 
             if (Heap[index][0] > Heap[smallest][0]){
-                swap(index, smallest);
+                swap(Heap, index, smallest, temp);
             } else {
                 break;
             }
@@ -66,7 +49,7 @@ public class BinaryHeap {
         }
     }
 
-    public boolean isEmpty(){
+    public static boolean isEmpty(int HeapSize){
         return HeapSize == 0;
     }
 
@@ -85,11 +68,11 @@ public class BinaryHeap {
     }
 
 
-    private boolean hasLeftChild(int i) {
+    private static boolean hasLeftChild(int i, int HeapSize) {
         return leftIndex(i) < HeapSize;
     }
 
-    private boolean hasRightChild(int i) {
+    private static boolean hasRightChild(int i, int HeapSize) {
         return rightIndex(i) < HeapSize;
     }
 
@@ -97,11 +80,11 @@ public class BinaryHeap {
         return (i-1) / 2;
     }
 
-    private int[] parent(int i) {
+    private static int[] parent(int[][] Heap, int i) {
         return Heap[parentIndex(i)];
     }
 
-    private void swap(int i1, int i2){
+    private static void swap(int[][] Heap, int i1, int i2, int[] temp){
         temp[0] = Heap[i1][0];
         temp[1] = Heap[i1][1];
 
@@ -114,24 +97,17 @@ public class BinaryHeap {
     }
 
 
-    public int[] getMin(){
-        //assert Clean;
-        assert !isEmpty();
-        returnTemp[0] = Heap[0][0];
-        returnTemp[1] = Heap[0][1];
-        swap( 0, HeapSize - 1);
-
-        HeapSize--;
-        heapifyDown(0);
-        return returnTemp;
+    public static void getMin(int[][] Heap, int HeapSize, int[] result, int[] temp){
+        assert !isEmpty(HeapSize);
+        result[0] = Heap[0][0];
+        result[1] = Heap[0][1];
+        swap( Heap, 0, HeapSize - 1, temp);
+        heapifyDown(Heap, HeapSize - 1, 0, temp);
     }
 
-    @Override
-    public String toString() {
-        int[] tempArray = new int[HeapSize];
-        for (int i = 0; i < HeapSize; i++) {
-            tempArray[i] = Heap[i][0];
-        }
-        return Arrays.toString(tempArray);
+    public static void peek(int[][] Heap, int HeapSize, int[] result){
+        assert !isEmpty(HeapSize);
+        result[0] = Heap[0][0];
+        result[1] = Heap[0][1];
     }
 }
