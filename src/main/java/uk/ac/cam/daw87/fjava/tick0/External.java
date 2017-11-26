@@ -2,7 +2,6 @@ package uk.ac.cam.daw87.fjava.tick0;
 
 import com.danwainwright.java.heap.tuple.IntPairBinaryHeap;
 import com.danwainwright.java.heap.tuple.IntPairMinHeap;
-import uk.ac.cam.daw87.fjava.tick0.helpers.Helper;
 import uk.ac.cam.daw87.fjava.tick0.helpers.Sorters;
 
 import java.io.IOException;
@@ -49,7 +48,9 @@ public final class External {
                 sortInMemory(f1, fileSize);
             } else {
                 initialSort(f1, f2);
-                int groups = Helper.roundUp(totalInts, INITIAL_SORT_SIZE);
+                int groups = totalInts / INITIAL_SORT_SIZE;
+                if (totalInts % INITIAL_SORT_SIZE != 0)
+                    groups++;
                 merge(f1a, f2a, groups, fileSize);
             }
         }
