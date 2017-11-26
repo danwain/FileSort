@@ -27,7 +27,7 @@ public class IntPairBinaryHeap implements IntPairMinHeap{
     public void insert(int number, int filePosition) throws IllegalStateException {
         if (HeapSize >= Heap.length)
             throw new IllegalStateException();
-        addNoHeaify(number, filePosition);
+        addNoHeapify(number, filePosition);
         heapifyUP();
     }
 
@@ -39,7 +39,7 @@ public class IntPairBinaryHeap implements IntPairMinHeap{
     }
 
     @Override
-    public void addNoHeaify(int number, int filePosition) throws IllegalStateException{
+    public void addNoHeapify(int number, int filePosition) throws IllegalStateException{
         if (HeapSize >= Heap.length)
             throw new IllegalStateException();
         Heap[HeapSize][0] = number;

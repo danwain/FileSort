@@ -22,7 +22,7 @@ public interface IntPairMinHeap {
      * @param feature The extra tag that is kept with the key
      * @throws IllegalStateException if there are capacity issues then this is thrown
      */
-    void addNoHeaify(int key, int feature) throws IllegalStateException;
+    void addNoHeapify(int key, int feature) throws IllegalStateException;
 
     /**
      * Peek at the minimum item in the heap.
@@ -46,7 +46,7 @@ public interface IntPairMinHeap {
 
     /**
      * After running it maintains that the heap is valid.
-     * This is useful when adding items with {@link #addNoHeaify(int, int)}.
+     * This is useful when adding items with {@link #addNoHeapify(int, int)}.
      */
     void build();
 

@@ -37,9 +37,7 @@ public class Radix {
             // move data
             for (int i = d; i < n; i+=4) {
                 int c = a[i + start] & MASK;
-                for (int j = 0; j < 4 ; j++) {
-                    aux[count[c] * 4 + j] = a[i + j - d + start];
-                }
+                System.arraycopy(a, i - d + start, aux, count[c] * 4, 4);
                 count[c]++;
             }
 

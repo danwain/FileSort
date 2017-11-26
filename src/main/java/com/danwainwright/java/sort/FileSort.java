@@ -23,16 +23,17 @@ public final class FileSort {
     private final static int IN_MEMORY_RADIX = 1000000;
     private final static int MAX_HEAP_SIZE = 1000000;
     private final static int WRITER_SIZE = 300000;
-    private final static OpenOption[] openOptions = new OpenOption[] {StandardOpenOption.READ, StandardOpenOption.WRITE};
+    private final static OpenOption[] openOptions = new OpenOption[]{StandardOpenOption.READ, StandardOpenOption.WRITE};
 
     /**
      * Takes the file to sort and a temporary file.
      * The file p1 will contain the sorted data after running.
+     *
      * @param p1 File to sort
-     * @param p2 Tempory file, needs to be the same size as p1
-     * @throws IOException When file can not be read from and written to
+     * @param p2 Temporary file, needs to be the same size as p1
+     * @throws IOException          When file can not be read from and written to
      * @throws InterruptedException When async read and writes fail
-     * @throws ExecutionException When async read and writes fail
+     * @throws ExecutionException   When async read and writes fail
      */
     public static void sort(Path p1, Path p2) throws IOException, InterruptedException, ExecutionException {
         FileChannel f1 = FileChannel.open(p1, openOptions);
@@ -58,7 +59,8 @@ public final class FileSort {
     /**
      * Sort a file by reading into memory sorting and writing back as one operation.
      * File needs to fit in memory for this
-     * @param f File to sort
+     *
+     * @param f        File to sort
      * @param fileSize The size of the file
      * @throws IOException When file can not be read from and written to
      */
@@ -96,12 +98,12 @@ public final class FileSort {
         lookup[lookup.length - 1][0] = fileSize;
         lookup[lookup.length - 1][1] = lookup[lookup.length - 2][0];
         Arrays.parallelSetAll(readCache, i -> ByteBuffer.allocate(amount_in_each * 4));
-        readCache[readCache.length - 1] = ByteBuffer.allocate((Math.min(fileSize - lookup[lookup.length - 2][1], amount_in_each)));
+        readCache[readCache.length - 1] = ByteBuffer.allocate(Math.min(fileSize - lookup[lookup.length - 2][1], amount_in_each));
         Arrays.parallelSetAll(readCacheWaiting, i -> initialRead(f2, lookup, i, readCache[i].limit(), readDone));
 
         for (int k = 0; k < lookup.length; k++) {
             readBuffer(f2, lookup, k, amount_in_each, readCache, readCacheWaiting, readDone);
-            heap.addNoHeaify(readCache[k].getInt(), k);
+            heap.addNoHeapify(readCache[k].getInt(), k);
         }
         heap.build();
 
@@ -120,7 +122,8 @@ public final class FileSort {
                 write.clear();
             }
             int[] returnTemp = heap.peek();
-            if (readCache[returnTemp[1]].remaining() >= 4 || readBuffer(f2, lookup, returnTemp[1], amount_in_each, readCache, readCacheWaiting, readDone)) {
+            if (readCache[returnTemp[1]].remaining() >= 4 ||
+                    readBuffer(f2, lookup, returnTemp[1], amount_in_each, readCache, readCacheWaiting, readDone)) {
                 assert readCache[returnTemp[1]].remaining() >= 4;
                 heap.replaceMin(readCache[returnTemp[1]].getInt(), returnTemp[1]);
             } else {
@@ -135,7 +138,9 @@ public final class FileSort {
     }
 
 
-    private static boolean readBuffer(AsynchronousFileChannel file, int[][] positions, int i, int toRead, ByteBuffer[] readCache, ByteBuffer[] readCacheWaiting, Future<Integer>[] readFutures) throws IOException, InterruptedException, ExecutionException {
+    private static boolean readBuffer(AsynchronousFileChannel file, int[][] positions, int i, int toRead,
+                                      ByteBuffer[] readCache, ByteBuffer[] readCacheWaiting, Future<Integer>[] readFutures)
+            throws InterruptedException, ExecutionException {
         final int end = positions[i][0];
         int index = positions[i][1];
         final int length = Math.min(Math.min(toRead << 2, end - index), readCache[i].capacity());
