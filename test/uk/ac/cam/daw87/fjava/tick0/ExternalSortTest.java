@@ -6,7 +6,7 @@ import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 
 public class ExternalSortTest {
-    private static final String dir = "/home/dan/Documents/Projects/FileSort/data";
+    private static final String dir = "/home/dan/Documents/fjava/Sort/fjava-tick0/data";
     private static final String[] Hashes = {
             "d41d8cd98f0b24e980998ecf8427e",
             "a54f041a9e15b5f25c463f1db7449",
