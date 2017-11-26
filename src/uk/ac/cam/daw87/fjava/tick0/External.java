@@ -5,13 +5,11 @@ import com.danwainwright.java.heap.tuple.IntPairMinHeap;
 import uk.ac.cam.daw87.fjava.tick0.helpers.*;
 
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.FileChannel;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import java.util.concurrent.ExecutionException;
