@@ -2,7 +2,8 @@ package uk.ac.cam.daw87.fjava.tick0;
 
 import com.danwainwright.java.heap.tuple.IntPairBinaryHeap;
 import com.danwainwright.java.heap.tuple.IntPairMinHeap;
-import uk.ac.cam.daw87.fjava.tick0.helpers.*;
+import uk.ac.cam.daw87.fjava.tick0.helpers.Helper;
+import uk.ac.cam.daw87.fjava.tick0.helpers.Sorters;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -15,6 +16,10 @@ import java.util.Arrays;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
+/**
+ * Sort file of 4 byte integers.
+ * This is done using a k-way merge and can sort files that don't fit in memory
+ */
 public final class External {
     private final static int INITIAL_SORT_SIZE = 756490;
     private final static int IN_MEMORY_RADIX = 1000000;
@@ -22,12 +27,20 @@ public final class External {
     private final static int WRITER_SIZE = 300000;
     private final static OpenOption[] openOptions = new OpenOption[] {StandardOpenOption.READ, StandardOpenOption.WRITE};
 
-    public static void sort(Path p1, Path p2) throws IOException, IllegalArgumentException, InterruptedException, ExecutionException {
+    /**
+     * Takes the file to sort and a temporary file.
+     * The file p1 will contain the sorted data after running.
+     * @param p1 File to sort
+     * @param p2 Tempory file, needs to be the same size as p1
+     * @throws IOException When file can not be read from and written to
+     * @throws InterruptedException When async read and writes fail
+     * @throws ExecutionException When async read and writes fail
+     */
+    public static void sort(Path p1, Path p2) throws IOException, InterruptedException, ExecutionException {
         FileChannel f1 = FileChannel.open(p1, openOptions);
         FileChannel f2 = FileChannel.open(p2, openOptions);
-        AsynchronousFileChannel f1a = AsynchronousFileChannel.open(p1, StandardOpenOption.WRITE);
         AsynchronousFileChannel f2a = AsynchronousFileChannel.open(p2, StandardOpenOption.READ);
-
+        AsynchronousFileChannel f1a = AsynchronousFileChannel.open(p1, StandardOpenOption.WRITE);
         final int fileSize = (int) f1.size();
         final int totalInts = fileSize / 4;
 
@@ -42,7 +55,14 @@ public final class External {
         }
     }
 
-    private static void sortInMemory(FileChannel f, int fileSize) throws IOException{
+    /**
+     * Sort a file by reading into memory sorting and writing back as one operation.
+     * File needs to fit in memory for this
+     * @param f File to sort
+     * @param fileSize The size of the file
+     * @throws IOException When file can not be read from and written to
+     */
+    private static void sortInMemory(FileChannel f, int fileSize) throws IOException {
         final ByteBuffer buffer = ByteBuffer.allocate(fileSize);
         f.position(0);
         f.read(buffer);
@@ -53,7 +73,8 @@ public final class External {
         f.write(buffer);
     }
 
-    private static void merge(AsynchronousFileChannel f1, AsynchronousFileChannel f2, int groups, int fileSize) throws IOException, InterruptedException, ExecutionException{
+    private static void merge(AsynchronousFileChannel f1, AsynchronousFileChannel f2, int groups, int fileSize)
+            throws IOException, InterruptedException, ExecutionException {
         assert groups >= 1;
         final IntPairMinHeap heap = new IntPairBinaryHeap(groups);
         ByteBuffer write = ByteBuffer.allocate(WRITER_SIZE);
@@ -84,9 +105,8 @@ public final class External {
         }
         heap.build();
 
-
         while (!heap.isEmpty()) {
-            if (write.position() + 4 > WRITER_SIZE){
+            if (write.position() + 4 > WRITER_SIZE) {
                 write.flip();
                 if (futureWrite != null) {
                     futureWrite.get();
@@ -115,7 +135,7 @@ public final class External {
     }
 
 
-    private static boolean readBuffer(AsynchronousFileChannel file, int[][] positions, int i, int toRead, ByteBuffer[] readCache, ByteBuffer[] readCacheWaiting, Future<Integer>[] readFutures) throws IOException, InterruptedException, ExecutionException{
+    private static boolean readBuffer(AsynchronousFileChannel file, int[][] positions, int i, int toRead, ByteBuffer[] readCache, ByteBuffer[] readCacheWaiting, Future<Integer>[] readFutures) throws IOException, InterruptedException, ExecutionException {
         final int end = positions[i][0];
         int index = positions[i][1];
         final int length = Math.min(Math.min(toRead << 2, end - index), readCache[i].capacity());
@@ -156,8 +176,8 @@ public final class External {
         return readWaiting;
     }
 
-    private  static void initialSort(FileChannel f1, FileChannel f2) throws IOException {
-        ByteBuffer buffer = ByteBuffer.allocate(INITIAL_SORT_SIZE << 2);
+    private static void initialSort(FileChannel f1, FileChannel f2) throws IOException {
+        ByteBuffer buffer = ByteBuffer.allocate(INITIAL_SORT_SIZE * 4);
         byte[] array = buffer.array();
         int length;
         while (true) {
