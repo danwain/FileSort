@@ -15,4 +15,4 @@ include 'api'
 include 'services:webservice'
 */
 
-rootProject.name = 'fjava-tick0'
+rootProject.name = 'FileSort'
