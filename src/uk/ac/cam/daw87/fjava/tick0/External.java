@@ -41,10 +41,9 @@ public final class External {
     }
 
     private static void sortInMemory(FileChannel f, int fileSize, int totalInts) throws IOException{
+        final ByteBuffer buffer = ByteBuffer.allocate(fileSize);
         f.position(0);
-        ByteBuffer buffer = ByteBuffer.allocate(fileSize);
-        int read = f.read(buffer);
-        assert read == totalInts * 4;
+        f.read(buffer);
         buffer.position(0);
         Sorters.RadixSort(buffer.array(), 0, fileSize);
         buffer.position(0);
