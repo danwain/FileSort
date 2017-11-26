@@ -1,12 +1,14 @@
 package uk.ac.cam.daw87.fjava.tick0;
 
-import uk.ac.cam.daw87.fjava.tick0.ExternalSort;
-
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 
+import org.junit.Test;
+
+import static org.junit.Assert.*;
+
 public class ExternalSortTest {
-    private static final String dir = "/home/dan/Documents/fjava/Sort/fjava-tick0/data";
+    private static final String dir = "./src/test/data";
     private static final String[] Hashes = {
             "d41d8cd98f0b24e980998ecf8427e",
             "a54f041a9e15b5f25c463f1db7449",
@@ -27,8 +29,8 @@ public class ExternalSortTest {
             "cc80f01b7d2d26042f3286bdeff0d9"
     };
 
-
-    public static void main(String[] args) throws IOException, InterruptedException, ExecutionException {
+    @Test
+    public void sort() throws IOException, InterruptedException, ExecutionException {
 
         String[][] testList = new String[17][];
         for (int i = 1; i <= 17 ; i++) {
@@ -39,31 +41,9 @@ public class ExternalSortTest {
             testList[i-1] = testFile;
         }
 
-        boolean failed = false;
-        long runningTotal = 0;
-
-        int count = 0;
-
-
         for (String[] str : testList){
-            System.gc();
-            long start = System.nanoTime();
             ExternalSort.sort(str[0], str[1]);
-            long end = System.nanoTime();
-            long total = end - start;
-            runningTotal += total;
-            //System.out.println("Time: " + total);
-            if (!str[2].equals(ExternalSort.checkSum(str[0]))) {
-                System.out.println("Failed " + str[0]);
-                failed = true;
-            } else {
-                System.out.println("Passed " + str[0]);
-            }
-            count++;
-            if (count == -1)
-                break;
+            assertEquals(str[2], ExternalSort.checkSum(str[0]));
         }
-        System.out.println("The overall status is " + (!failed));
-        System.out.println("Total time is " + runningTotal / 1000000000 + " seconds");
     }
 }
