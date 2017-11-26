@@ -54,53 +54,35 @@ public final class External {
 
     private static void merge(AsynchronousFileChannel f1, AsynchronousFileChannel f2, int groups, int fileSize, String p1, String p2) throws IOException, InterruptedException, ExecutionException{
         assert groups >= 1;
-
-        final int amount_in_each = MAX_HEAP_SIZE / groups;
-        assert amount_in_each > 0;
-
-        int writeIndex = 0;
-        int[][] lookup = new int[groups][2];
-        ByteBuffer[] readCache = new ByteBuffer[groups];
-        ByteBuffer[] readCacheWaiting = new ByteBuffer[groups];
-        Future<Integer> [] readDone = new Future[groups];
-        for (int i = 0; i < groups - 1; i++) {
-            lookup[i][0] = (i + 1) * INITIAL_SORT_SIZE * 4;
-            lookup[i][1] = i * INITIAL_SORT_SIZE * 4;
-        }
-        lookup[groups - 1][0] = fileSize;
-        lookup[groups - 1][1] = (groups - 1) * INITIAL_SORT_SIZE * 4;
-        Arrays.parallelSetAll(readCache, i -> {
-            int size;
-            if (i == groups - 1){
-                size = (Math.min(fileSize - (groups - 1) * INITIAL_SORT_SIZE * 4, amount_in_each) / 4) * 4;
-            } else {
-                size = amount_in_each * 4;
-            }
-            return ByteBuffer.allocate(size);
-        });
-        Arrays.parallelSetAll(readCacheWaiting, i -> {
-            int size;
-            if (i == groups - 1){
-                size = (Math.min(fileSize - (groups - 1) * INITIAL_SORT_SIZE * 4, amount_in_each) / 4) * 4;
-            } else {
-                size = amount_in_each * 4;
-            }
-            return initialRead(f2, lookup, i, size, readDone);
-        });
-
         final IntPairMinHeap heap = new IntPairBinaryHeap(groups);
-        int[] returnTemp;
-
         ByteBuffer write = ByteBuffer.allocate(WRITER_SIZE);
         ByteBuffer writeWaiting = ByteBuffer.allocate(WRITER_SIZE);
         ByteBuffer tempByteBuffer;
         Future<Integer> futureWrite = null;
+        final int amount_in_each = MAX_HEAP_SIZE / groups;
+        assert amount_in_each > 0;
+        final int[][] lookup = new int[groups][2];
+        final ByteBuffer[] readCache = new ByteBuffer[groups];
+        final ByteBuffer[] readCacheWaiting = new ByteBuffer[groups];
+        final Future<Integer>[] readDone = new Future[groups];
+        int writeIndex = 0;
+
+        for (int i = 0; i < lookup.length - 1; i++) {
+            lookup[i][0] = (i + 1) * INITIAL_SORT_SIZE * 4;
+            lookup[i][1] = i * INITIAL_SORT_SIZE * 4;
+        }
+        lookup[lookup.length - 1][0] = fileSize;
+        lookup[lookup.length - 1][1] = lookup[lookup.length - 2][0];
+        Arrays.parallelSetAll(readCache, i -> ByteBuffer.allocate(amount_in_each * 4));
+        readCache[readCache.length - 1] = ByteBuffer.allocate((Math.min(fileSize - lookup[lookup.length - 2][1], amount_in_each)));
+        Arrays.parallelSetAll(readCacheWaiting, i -> initialRead(f2, lookup, i, readCache[i].limit(), readDone));
+
         for (int k = 0; k < lookup.length; k++) {
-            boolean test = readBuffer(f2, lookup, k, amount_in_each, readCache, readCacheWaiting, readDone);
-            assert test;
+            readBuffer(f2, lookup, k, amount_in_each, readCache, readCacheWaiting, readDone);
             heap.addNoHeaify(readCache[k].getInt(), k);
         }
         heap.build();
+
 
         while (!heap.isEmpty()) {
             if (write.position() + 4 > WRITER_SIZE){
@@ -116,7 +98,7 @@ public final class External {
                 writeIndex += WRITER_SIZE;
                 write.clear();
             }
-            returnTemp = heap.peek();
+            int[] returnTemp = heap.peek();
             if (readCache[returnTemp[1]].remaining() >= 4 || readBuffer(f2, lookup, returnTemp[1], amount_in_each, readCache, readCacheWaiting, readDone)) {
                 assert readCache[returnTemp[1]].remaining() >= 4;
                 heap.replaceMin(readCache[returnTemp[1]].getInt(), returnTemp[1]);
