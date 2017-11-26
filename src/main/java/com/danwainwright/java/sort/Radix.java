@@ -1,7 +1,7 @@
-package uk.ac.cam.daw87.fjava.tick0.helpers;
+package com.danwainwright.java.sort;
 
 
-public class Sorters {
+public class Radix {
 
     public static void RadixSort(byte[] a, int start, int end) {
         final int R = 256;    // each bytes is between 0 and 255

@@ -1,8 +1,7 @@
-package uk.ac.cam.daw87.fjava.tick0;
+package com.danwainwright.java.sort;
 
 import com.danwainwright.java.heap.tuple.IntPairBinaryHeap;
 import com.danwainwright.java.heap.tuple.IntPairMinHeap;
-import uk.ac.cam.daw87.fjava.tick0.helpers.Sorters;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -19,7 +18,7 @@ import java.util.concurrent.Future;
  * Sort file of 4 byte integers.
  * This is done using a k-way merge and can sort files that don't fit in memory
  */
-public final class External {
+public final class FileSort {
     private final static int INITIAL_SORT_SIZE = 756490;
     private final static int IN_MEMORY_RADIX = 1000000;
     private final static int MAX_HEAP_SIZE = 1000000;
@@ -68,7 +67,7 @@ public final class External {
         f.position(0);
         f.read(buffer);
         buffer.position(0);
-        Sorters.RadixSort(buffer.array(), 0, fileSize);
+        Radix.RadixSort(buffer.array(), 0, fileSize);
         buffer.position(0);
         f.position(0);
         f.write(buffer);
@@ -187,7 +186,7 @@ public final class External {
             if (length <= 0)
                 break;
             buffer.position(0);
-            Sorters.RadixSort(array, 0, length);
+            Radix.RadixSort(array, 0, length);
             buffer.position(0);
             buffer.limit(length);
             f2.write(buffer);

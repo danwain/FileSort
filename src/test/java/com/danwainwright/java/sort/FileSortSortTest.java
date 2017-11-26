@@ -1,4 +1,4 @@
-package uk.ac.cam.daw87.fjava.tick0;
+package com.danwainwright.java.sort;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -13,7 +13,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.*;
 
-public class ExternalSortTest {
+public class FileSortSortTest {
     private static final String dir = "./src/test/data";
     private static final String[] Hashes = {
             "d41d8cd98f0b24e980998ecf8427e",
@@ -48,7 +48,7 @@ public class ExternalSortTest {
         }
 
         for (String[] str : testList){
-            External.sort(Paths.get(str[0]), Paths.get(str[1]));
+            FileSort.sort(Paths.get(str[0]), Paths.get(str[1]));
             assertEquals(str[2], checkSum(str[0]));
         }
     }
