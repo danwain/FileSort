@@ -1,6 +1,12 @@
 package uk.ac.cam.daw87.fjava.tick0;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.file.Paths;
+import java.security.DigestInputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.ExecutionException;
 
 import org.junit.Test;
@@ -42,8 +48,40 @@ public class ExternalSortTest {
         }
 
         for (String[] str : testList){
-            ExternalSort.sort(str[0], str[1]);
-            assertEquals(str[2], ExternalSort.checkSum(str[0]));
+            External.sort(Paths.get(str[0]), Paths.get(str[1]));
+            assertEquals(str[2], checkSum(str[0]));
         }
+    }
+
+    private static String byteToHex(byte b) {
+        String r = Integer.toHexString(b);
+        if (r.length() == 8) {
+            return r.substring(6);
+        }
+        return r;
+    }
+
+    public static String checkSum(String f) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            DigestInputStream ds = new DigestInputStream(
+                    new FileInputStream(f), md);
+            byte[] b = new byte[512];
+            while (ds.read(b) != -1)
+                ;
+
+            String computed = "";
+            for(byte v : md.digest())
+                computed += byteToHex(v);
+
+            return computed;
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return "<error computing checksum>";
     }
 }
