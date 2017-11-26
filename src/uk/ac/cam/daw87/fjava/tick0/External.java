@@ -9,6 +9,8 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.FileChannel;
+import java.nio.file.OpenOption;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
@@ -20,27 +22,29 @@ public final class External {
     private final static int IN_MEMORY_RADIX = 1000000;
     private final static int MAX_HEAP_SIZE = 1000000;
     private final static int WRITER_SIZE = 300000;
+    private final static OpenOption[] openOptions = new OpenOption[] {StandardOpenOption.READ, StandardOpenOption.WRITE};
 
-    public static void sort(String p1, String p2) throws IOException, IllegalArgumentException, InterruptedException, ExecutionException{
-        FileChannel f1 = new RandomAccessFile(p1,"rw").getChannel();
-        FileChannel f2 = new RandomAccessFile(p2, "rw").getChannel();
-        AsynchronousFileChannel f2a = AsynchronousFileChannel.open(Paths.get(p2));
-        AsynchronousFileChannel f1a = AsynchronousFileChannel.open(Paths.get(p1), StandardOpenOption.WRITE);
+    public static void sort(Path p1, Path p2) throws IOException, IllegalArgumentException, InterruptedException, ExecutionException {
+        FileChannel f1 = FileChannel.open(p1, openOptions);
+        FileChannel f2 = FileChannel.open(p2, openOptions);
+        AsynchronousFileChannel f1a = AsynchronousFileChannel.open(p1, StandardOpenOption.WRITE);
+        AsynchronousFileChannel f2a = AsynchronousFileChannel.open(p2, StandardOpenOption.READ);
+
         final int fileSize = (int) f1.size();
-        final int totalInts = fileSize >> 2;
+        final int totalInts = fileSize / 4;
 
-        if (fileSize <= 4){
-            return; // already sorted
-        } else if (fileSize <= IN_MEMORY_RADIX){
-            sortInMemory(f1, fileSize, totalInts);
-        } else {
-            initialSort(f1, f2);
-            int groups = Helper.roundUp(totalInts, INITIAL_SORT_SIZE);
-            merge(f1a, f2a, groups, fileSize, p1, p2);
+        if (fileSize > 4) {
+            if (fileSize <= IN_MEMORY_RADIX) {
+                sortInMemory(f1, fileSize);
+            } else {
+                initialSort(f1, f2);
+                int groups = Helper.roundUp(totalInts, INITIAL_SORT_SIZE);
+                merge(f1a, f2a, groups, fileSize);
+            }
         }
     }
 
-    private static void sortInMemory(FileChannel f, int fileSize, int totalInts) throws IOException{
+    private static void sortInMemory(FileChannel f, int fileSize) throws IOException{
         final ByteBuffer buffer = ByteBuffer.allocate(fileSize);
         f.position(0);
         f.read(buffer);
@@ -51,7 +55,7 @@ public final class External {
         f.write(buffer);
     }
 
-    private static void merge(AsynchronousFileChannel f1, AsynchronousFileChannel f2, int groups, int fileSize, String p1, String p2) throws IOException, InterruptedException, ExecutionException{
+    private static void merge(AsynchronousFileChannel f1, AsynchronousFileChannel f2, int groups, int fileSize) throws IOException, InterruptedException, ExecutionException{
         assert groups >= 1;
         final IntPairMinHeap heap = new IntPairBinaryHeap(groups);
         ByteBuffer write = ByteBuffer.allocate(WRITER_SIZE);

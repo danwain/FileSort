@@ -3,6 +3,7 @@ package uk.ac.cam.daw87.fjava.tick0;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -11,7 +12,7 @@ import java.util.concurrent.ExecutionException;
 public class ExternalSort {
 
     public static void sort(String f1, String f2) throws IOException, InterruptedException, ExecutionException {
-        External.sort(f1, f2);
+        External.sort(Paths.get(f1), Paths.get(f2));
     }
 
     private static String byteToHex(byte b) {
