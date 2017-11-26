@@ -1,5 +1,7 @@
 package uk.ac.cam.daw87.fjava.tick0;
 
+import com.danwainwright.java.heap.tuple.IntPairBinaryHeap;
+import com.danwainwright.java.heap.tuple.IntPairMinHeap;
 import uk.ac.cam.daw87.fjava.tick0.helpers.*;
 
 import java.io.IOException;
@@ -86,7 +88,7 @@ public final class External {
             return initialRead(f2, lookup, i, size, readDone);
         });
 
-        final BinaryHeap heap = new BinaryHeap(groups);
+        final IntPairMinHeap heap = new IntPairBinaryHeap(groups);
         int[] returnTemp;
 
         ByteBuffer write = ByteBuffer.allocate(WRITER_SIZE);
@@ -119,7 +121,7 @@ public final class External {
                 assert readCache[returnTemp[1]].remaining() >= 4;
                 heap.replaceMin(readCache[returnTemp[1]].getInt(), returnTemp[1]);
             } else {
-                heap.getMin();
+                heap.popMin();
             }
             write.putInt(returnTemp[0]);
         }
